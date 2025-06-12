@@ -2,58 +2,106 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tubes_mobapp/login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class SettingsTab extends StatefulWidget {
+  const SettingsTab({super.key});
 
-  Future<void> _logout(BuildContext context) async {
-    await Supabase.instance.client.auth.signOut();
-    if (!context.mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
+  @override
+  State<SettingsTab> createState() => _SettingsTabState();
+}
+
+class _SettingsTabState extends State<SettingsTab> {
+  final supabase = Supabase.instance.client;
+
+  late final user = supabase.auth.currentUser;
+
+  Map<String, dynamic>? profile;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProfile();
+  }
+
+  Future<void> fetchProfile() async {
+    final response = await supabase
+        .from('PROFILES')
+        .select()
+        .eq('id', user!.id)
+        .single();
+
+    setState(() {
+      profile = response;
+      isLoading = false;
+    });
+  }
+
+  void changePassword() {
+    // Arahkan ke halaman ubah password, atau tampilkan form
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ganti Password'),
+        content: const Text('Fitur ini sedang dikembangkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Beranda - Kerja Pintar'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
-            tooltip: 'Logout',
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (profile == null) {
+      return const Center(child: Text('Profil tidak ditemukan.'));
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundImage: profile!['foto'] != null
+                ? NetworkImage(profile!['foto'])
+                : null,
+            child: profile!['foto'] == null ? const Icon(Icons.person, size: 50) : null,
+          ),
+          const SizedBox(height: 16),
+          InfoTile(label: 'Nama Lengkap', value: profile!['nama_lengkap'] ?? '-'),
+          InfoTile(label: 'NIM', value: profile!['nim'] ?? '-'),
+          InfoTile(label: 'Status', value: profile!['status'] ?? '-'),
+          InfoTile(label: 'Email', value: user?.email ?? '-'),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: changePassword,
+            icon: const Icon(Icons.lock),
+            label: const Text('Ubah Password'),
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.verified_user, size: 80, color: Colors.blue),
-              const SizedBox(height: 24),
-              Text(
-                "Selamat datang,\n${user?.email ?? 'Pengguna'}!",
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Anda telah berhasil masuk ke aplikasi Kerja Pintar.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
+    );
+  }
+}
+
+class InfoTile extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const InfoTile({required this.label, required this.value, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text(value),
     );
   }
 }
