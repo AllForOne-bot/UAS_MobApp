@@ -1,0 +1,61 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.flutter_application_1">
+
+    <!-- Izinkan akses internet -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name="${applicationName}"
+        android:label="flutter_application_1"
+        android:icon="@mipmap/ic_launcher">
+
+        <!-- Metadata Google Web Client ID -->
+        <meta-data
+            android:name="com.google.android.gms.client_id"
+            android:value="YOUR_WEB_CLIENT_ID.apps.googleusercontent.com" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <!-- Launcher -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Intent filter untuk Supabase login redirect -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="io.supabase.flutterdemo"
+                    android:host="login-callback" />
+            </intent-filter>
+        </activity>
+
+        <!-- Metadata Flutter -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+
+    <!-- Dibutuhkan untuk Android 11+ -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
+</manifest>
