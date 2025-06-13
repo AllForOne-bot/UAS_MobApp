@@ -68,82 +68,153 @@ class _SettingsTabState extends State<SettingsTab> {
   }
 
   Future<void> updateProfile() async {
-    try {
-      await supabase
-          .from('profiles')
-          .update({
-            'full_name': _nameController.text,
-            'nim_nip': _nimController.text,
-          })
-          .eq('id', user!.id);
+    print('User ID: ${user?.id}');
+  try {
+    final updates = {
+      'full_name': _nameController.text,
+      'nim_nip': _nimController.text,
+    };
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profil berhasil diperbarui')),
-      );
+    final response = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user!.id);
 
-      fetchProfile();
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memperbarui profil: $e')));
-    }
+    print('Update result: $response');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profil berhasil diperbarui')),
+    );
+
+    fetchProfile();
+  } catch (e) {
+    print('Error saat update: $e');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Gagal memperbarui profil: $e')));
   }
+}
 
   Future<void> _pickAndUploadImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
+  final picker = ImagePicker();
+  final picked = await picker.pickImage(source: ImageSource.gallery);
+  if (picked == null) return;
 
-    final file = File(picked.path);
-    final fileExt = path.extension(file.path);
-    final fileName = const Uuid().v4();
-    final storagePath = 'profile_pictures/$fileName$fileExt';
+  final file = File(picked.path);
+  final fileExt = path.extension(file.path);
+  final fileName = const Uuid().v4();
+  final storagePath = 'profile_pictures/$fileName$fileExt';
 
-    try {
-      final bytes = await file.readAsBytes();
-      await supabase.storage
-          .from('avatars')
-          .uploadBinary(
-            storagePath,
-            bytes,
-            fileOptions: const FileOptions(upsert: true),
-          );
+  try {
+    await supabase.storage
+        .from('avatars')
+        .upload(
+          storagePath,
+          file,
+          fileOptions: const FileOptions(upsert: true),
+        );
 
-      final imageUrl = supabase.storage
-          .from('avatars')
-          .getPublicUrl(storagePath);
+    final imageUrl = supabase.storage
+        .from('avatars')
+        .getPublicUrl(storagePath);
 
-      await supabase
-          .from('profiles')
-          .update({'foto': imageUrl})
-          .eq('id', user!.id);
+    await supabase
+        .from('profiles')
+        .update({'avatar_url': imageUrl})
+        .eq('id', user!.id);
 
-      await fetchProfile();
+    await fetchProfile();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto profil berhasil diperbarui')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal upload foto: $e')));
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Foto profil berhasil diperbarui')),
+    );
+  } catch (e) {
+    print('Upload error: $e');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Gagal upload foto: $e')));
   }
+}
 
-  void changePassword() => showDialog(
-    context: context,
-    builder:
-        (_) => AlertDialog(
-          title: const Text('Ganti Password'),
-          content: const Text('Fitur ini sedang dikembangkan.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+  void changePassword() {
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Ubah Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password Baru',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: confirmPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Konfirmasi Password',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
-  );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newPassword = passwordController.text.trim();
+              final confirmPassword = confirmPasswordController.text.trim();
+
+              if (newPassword.isEmpty || confirmPassword.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Isi semua kolom terlebih dahulu')),
+                );
+                return;
+              }
+
+              if (newPassword != confirmPassword) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password tidak cocok')),
+                );
+                return;
+              }
+
+              if (newPassword.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password minimal 6 karakter')),
+                );
+                return;
+              }
+
+              try {
+                await supabase.auth.updateUser(UserAttributes(password: newPassword));
+                Navigator.pop(context); // Tutup dialog
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password berhasil diubah')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal mengubah password: $e')),
+                );
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,11 +233,11 @@ class _SettingsTabState extends State<SettingsTab> {
             child: CircleAvatar(
               radius: 50,
               backgroundImage:
-                  profile!['foto'] != null
-                      ? NetworkImage(profile!['foto'])
+                  profile!['avatar_url'] != null
+                      ? NetworkImage(profile!['avatar_url'])
                       : null,
               child:
-                  profile!['foto'] == null
+                  profile!['avatar_url'] == null
                       ? const Icon(Icons.person, size: 50)
                       : null,
             ),
@@ -223,7 +294,7 @@ class InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-    subtitle: Text(value),
-  );
+        title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(value),
+      );
 }
