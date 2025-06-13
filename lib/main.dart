@@ -6,9 +6,9 @@ import 'package:tubes_mobapp/splash_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://bwsooibahuagecubcgpn.supabase.co',
+    url: 'https://sxmqgbcjgppvidlaqdqd.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3c29vaWJhaHVhZ2VjdWJjZ3BuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODk2NDY2NiwiZXhwIjoyMDY0NTQwNjY2fQ.xufzH2wz2Rnvop56ZFv4IY8YjnJeq9hY3a9UwXbHrPw',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bXFnYmNqZ3BwdmlkbGFxZHFkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTgwNDg1MSwiZXhwIjoyMDY1MzgwODUxfQ.8g0JHPunnVohDBV9yTiAQ04JbQqXb6d9wnjUGvBx7BI',
   );
   runApp(const MyApp());
 }
