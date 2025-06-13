@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tubes_mobapp/Home_Menu.dart';
+import 'package:tubes_mobapp/pemilihan_matkul.dart';
 import 'package:tubes_mobapp/tab_input_kuis.dart';
-import 'package:tubes_mobapp/soal_essay.dart';
 import 'package:tubes_mobapp/setting.dart';
 
 class Menu extends StatefulWidget {
@@ -14,6 +15,7 @@ class Menu extends StatefulWidget {
 }
 
 class _MenuState extends State<Menu> {
+  final supabase = Supabase.instance.client;
   int _currentIndex = 0;
   late PageController _pageController;
   String _userStatus = '';
@@ -29,60 +31,115 @@ class _MenuState extends State<Menu> {
 
   Future<void> _loadUserStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final status = prefs.getString('status') ?? 'Mahasiswa';
+    final savedStatus = prefs.getString('status');
 
-    setState(() {
-      _userStatus = status;
+    print('Saved status from SharedPreferences: $savedStatus'); // Debug log
 
-      if (_userStatus == 'Mahasiswa') {
-        _pages = [
-          const TabHome(),
-          const TabInputKuis(),
-          const PenilaianPage(),
-          const SettingsTab(),
+    if (savedStatus != null && savedStatus.isNotEmpty) {
+      setState(() {
+        _userStatus = savedStatus;
+      });
+      _loadPagesAndNavItems();
+      return;
+    }
+
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      setState(() {
+        _pages = [const Center(child: Text('User tidak ditemukan'))];
+        _navItems = [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.error),
+            label: 'Error',
+          ),
         ];
+      });
+      return;
+    }
+
+    try {
+      final data =
+          await supabase
+              .from('profiles')
+              .select('status')
+              .eq('id', user.id)
+              .single();
+
+      final status = data['status'] ?? 'Mahasiswa';
+      print('Fetched status from Supabase: $status'); // Debug log
+
+      // Simpan status ke SharedPreferences
+      await prefs.setString('status', status);
+
+      setState(() {
+        _userStatus = status;
+      });
+      _loadPagesAndNavItems();
+    } catch (e) {
+      setState(() {
+        _pages = [const Center(child: Text('Gagal memuat status pengguna'))];
+        _navItems = [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.error),
+            label: 'Error',
+          ),
+        ];
+      });
+    }
+  }
+
+  void _loadPagesAndNavItems() {
+    if (_userStatus == 'Mahasiswa') {
+      setState(() {
+        _pages = [const TabHome(), const TabInputKuis(), const SettingsTab()];
         _navItems = [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(icon: Icon(Icons.quiz), label: 'Soal'),
           const BottomNavigationBarItem(
             icon: Icon(Icons.book_online),
-            label: 'Koreksi soal',
+            label: 'Soal Essay',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Pengaturan',
           ),
         ];
-      } else if (_userStatus == 'Dosen') {
-        _pages = [const TabHome(), const TabInputKuis(), const SettingsTab()];
+      });
+    } else if (_userStatus == 'Dosen') {
+      setState(() {
+        _pages = [
+          const TabHome(),
+          const TabInputKuis(),
+          const PemilihanMatkulPage(),
+          const SettingsTab(),
+        ];
         _navItems = [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(
             icon: Icon(Icons.table_chart),
-            label: 'Bank Soal',
+            label: 'Input Kuis',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.table_chart),
+            label: 'Penilaian',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Pengaturan',
           ),
         ];
-      } else {
-        _pages = [
-          const Center(child: Text('Status tidak dikenali')),
-          const SettingsTab(),
-        ];
+      });
+    } else {
+      setState(() {
+        _pages = [const Center(child: Text('Status tidak dikenali'))];
         _navItems = [
           const BottomNavigationBarItem(
             icon: Icon(Icons.warning),
             label: 'Tidak Valid',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Pengaturan',
-          ),
         ];
-      }
-    });
+      });
+    }
   }
 
   @override
@@ -112,9 +169,9 @@ class _MenuState extends State<Menu> {
             _pageController.jumpToPage(index);
           });
         },
-        selectedItemColor: Colors.deepPurple, // Warna ikon & label saat aktif
-        unselectedItemColor: Colors.grey, // Warna ikon & label saat non-aktif
-        backgroundColor: Colors.white, // Warna latar tab bar
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
         type: BottomNavigationBarType.fixed,
       ),
     );
