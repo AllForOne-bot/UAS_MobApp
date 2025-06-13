@@ -74,8 +74,9 @@ class _SettingsTabState extends State<SettingsTab> {
   Widget build(BuildContext context) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
     if (errorMsg != null) return Center(child: Text(errorMsg!));
-    if (profile == null)
+    if (profile == null) {
       return const Center(child: Text('Profil tidak ditemukan.'));
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -93,11 +94,8 @@ class _SettingsTabState extends State<SettingsTab> {
                     : null,
           ),
           const SizedBox(height: 16),
-          InfoTile(
-            label: 'Nama Lengkap',
-            value: profile!['nama_lengkap'] ?? '-',
-          ),
-          InfoTile(label: 'NIM', value: profile!['nim'] ?? '-'),
+          InfoTile(label: 'Nama Lengkap',value: profile!['full_name'] ?? '-',),
+          InfoTile(label: 'NIM', value: profile!['nim_nip'] ?? '-'),
           InfoTile(label: 'Status', value: profile!['status'] ?? '-'),
           InfoTile(label: 'Email', value: user?.email ?? '-'),
           const SizedBox(height: 20),
