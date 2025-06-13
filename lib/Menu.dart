@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tubes_mobapp/Home_Menu.dart';
 import 'package:tubes_mobapp/tab_input_kuis.dart';
-import 'package:tubes_mobapp/settings.dart';
 import 'package:tubes_mobapp/soal_essay.dart';
+import 'package:tubes_mobapp/setting.dart';
 
 class Menu extends StatefulWidget {
   static const routeName = '/menu';
