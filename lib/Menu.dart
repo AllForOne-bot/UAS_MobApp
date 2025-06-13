@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tubes_mobapp/Home_Menu.dart';
+import 'package:tubes_mobapp/tab_input_kuis.dart';
 import 'package:tubes_mobapp/settings.dart';
-// import 'grafik.dart';
-// import 'kontrol.dart';
-// import 'settings.dart'; // pastikan Settings tidak butuh authService
+import 'package:tubes_mobapp/soal_essay.dart';
 
 class Menu extends StatefulWidget {
-  static var routeName;
+  static const routeName = '/menu';
   const Menu({super.key});
 
   @override
@@ -30,41 +29,37 @@ class _MenuState extends State<Menu> {
 
   Future<void> _loadUserStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final status =
-        prefs.getString('status') ?? 'Mahasiswa'; // default Mahasiswa
+    final status = prefs.getString('status') ?? 'Mahasiswa';
 
     setState(() {
       _userStatus = status;
 
       if (_userStatus == 'Mahasiswa') {
         _pages = [
-          // const Grafik(),
-          // const Kontrol(),
-          const TabHome(), // ganti dengan widget asli
-          const HomeScreen(),
-          const Placeholder(), // Settings
+          const TabHome(),
+          const TabInputKuis(),
+          const PenilaianPage(),
+          const SettingsTab(),
         ];
         _navItems = [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(icon: Icon(Icons.quiz), label: 'Soal'),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.book_online),
+            label: 'Koreksi soal',
+          ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Pengaturan',
           ),
         ];
       } else if (_userStatus == 'Dosen') {
-        _pages = [
-          // const Grafik(),
-          // const MonitorPage(),
-          const TabHome(),
-          const HomeScreen(),
-          const Placeholder(),
-        ];
+        _pages = [const TabHome(), const TabInputKuis(), const SettingsTab()];
         _navItems = [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           const BottomNavigationBarItem(
             icon: Icon(Icons.table_chart),
-            label: 'Monitor',
+            label: 'Bank Soal',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -72,12 +67,14 @@ class _MenuState extends State<Menu> {
           ),
         ];
       } else {
-        // Default jika status tidak dikenal
-        _pages = [const Placeholder(), const Placeholder()];
+        _pages = [
+          const Center(child: Text('Status tidak dikenali')),
+          const SettingsTab(),
+        ];
         _navItems = [
           const BottomNavigationBarItem(
-            icon: Icon(Icons.error),
-            label: 'Error',
+            icon: Icon(Icons.warning),
+            label: 'Tidak Valid',
           ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -86,6 +83,12 @@ class _MenuState extends State<Menu> {
         ];
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
@@ -109,6 +112,10 @@ class _MenuState extends State<Menu> {
             _pageController.jumpToPage(index);
           });
         },
+        selectedItemColor: Colors.deepPurple, // Warna ikon & label saat aktif
+        unselectedItemColor: Colors.grey, // Warna ikon & label saat non-aktif
+        backgroundColor: Colors.white, // Warna latar tab bar
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }
