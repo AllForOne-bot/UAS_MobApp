@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:tubes_mobapp/login_screen.dart'; // <-- Tambahkan ini
 
 class SettingsTab extends StatefulWidget {
   const SettingsTab({super.key});
@@ -48,8 +49,7 @@ class _SettingsTabState extends State<SettingsTab> {
     }
 
     try {
-      final data =
-          await supabase.from('profiles').select().eq('id', user!.id).single();
+      final data = await supabase.from('profiles').select().eq('id', user!.id).single();
 
       if (!mounted) return;
       setState(() {
@@ -68,73 +68,57 @@ class _SettingsTabState extends State<SettingsTab> {
   }
 
   Future<void> updateProfile() async {
-    print('User ID: ${user?.id}');
-  try {
-    final updates = {
-      'full_name': _nameController.text,
-      'nim_nip': _nimController.text,
-    };
+    try {
+      final updates = {
+        'full_name': _nameController.text,
+        'nim_nip': _nimController.text,
+      };
 
-    final response = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user!.id);
+      await supabase.from('profiles').update(updates).eq('id', user!.id);
 
-    print('Update result: $response');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil berhasil diperbarui')),
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profil berhasil diperbarui')),
-    );
-
-    fetchProfile();
-  } catch (e) {
-    print('Error saat update: $e');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Gagal memperbarui profil: $e')));
+      fetchProfile();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memperbarui profil: $e')),
+      );
+    }
   }
-}
 
   Future<void> _pickAndUploadImage() async {
-  final picker = ImagePicker();
-  final picked = await picker.pickImage(source: ImageSource.gallery);
-  if (picked == null) return;
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
 
-  final file = File(picked.path);
-  final fileExt = path.extension(file.path);
-  final fileName = const Uuid().v4();
-  final storagePath = 'profile_pictures/$fileName$fileExt';
+    final file = File(picked.path);
+    final fileExt = path.extension(file.path);
+    final fileName = const Uuid().v4();
+    final storagePath = 'profile_pictures/$fileName$fileExt';
 
-  try {
-    await supabase.storage
-        .from('avatars')
-        .upload(
-          storagePath,
-          file,
-          fileOptions: const FileOptions(upsert: true),
-        );
+    try {
+      await supabase.storage.from('avatars').upload(
+            storagePath,
+            file,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
-    final imageUrl = supabase.storage
-        .from('avatars')
-        .getPublicUrl(storagePath);
+      final imageUrl = supabase.storage.from('avatars').getPublicUrl(storagePath);
 
-    await supabase
-        .from('profiles')
-        .update({'avatar_url': imageUrl})
-        .eq('id', user!.id);
+      await supabase.from('profiles').update({'avatar_url': imageUrl}).eq('id', user!.id);
+      await fetchProfile();
 
-    await fetchProfile();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Foto profil berhasil diperbarui')),
-    );
-  } catch (e) {
-    print('Upload error: $e');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Gagal upload foto: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto profil berhasil diperbarui')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal upload foto: $e')),
+      );
+    }
   }
-}
 
   void changePassword() {
     final passwordController = TextEditingController();
@@ -176,13 +160,6 @@ class _SettingsTabState extends State<SettingsTab> {
               final newPassword = passwordController.text.trim();
               final confirmPassword = confirmPasswordController.text.trim();
 
-              if (newPassword.isEmpty || confirmPassword.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Isi semua kolom terlebih dahulu')),
-                );
-                return;
-              }
-
               if (newPassword != confirmPassword) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Password tidak cocok')),
@@ -190,16 +167,9 @@ class _SettingsTabState extends State<SettingsTab> {
                 return;
               }
 
-              if (newPassword.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password minimal 6 karakter')),
-                );
-                return;
-              }
-
               try {
                 await supabase.auth.updateUser(UserAttributes(password: newPassword));
-                Navigator.pop(context); // Tutup dialog
+                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Password berhasil diubah')),
                 );
@@ -213,6 +183,16 @@ class _SettingsTabState extends State<SettingsTab> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> logout() async {
+    await supabase.auth.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
     );
   }
 
@@ -232,23 +212,17 @@ class _SettingsTabState extends State<SettingsTab> {
             onTap: _pickAndUploadImage,
             child: CircleAvatar(
               radius: 50,
-              backgroundImage:
-                  profile!['avatar_url'] != null
-                      ? NetworkImage(profile!['avatar_url'])
-                      : null,
-              child:
-                  profile!['avatar_url'] == null
-                      ? const Icon(Icons.person, size: 50)
-                      : null,
+              backgroundImage: profile!['avatar_url'] != null
+                  ? NetworkImage(profile!['avatar_url'])
+                  : null,
+              child: profile!['avatar_url'] == null
+                  ? const Icon(Icons.person, size: 50)
+                  : null,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            "Ketuk foto untuk mengganti",
-            style: TextStyle(fontSize: 12),
-          ),
+          const Text("Ketuk foto untuk mengganti", style: TextStyle(fontSize: 12)),
           const SizedBox(height: 16),
-
           TextFormField(
             controller: _nameController,
             decoration: const InputDecoration(
@@ -271,7 +245,6 @@ class _SettingsTabState extends State<SettingsTab> {
             label: const Text('Simpan Perubahan'),
           ),
           const SizedBox(height: 20),
-
           InfoTile(label: 'Status', value: profile!['status'] ?? '-'),
           InfoTile(label: 'Email', value: user?.email ?? '-'),
           const SizedBox(height: 20),
@@ -279,6 +252,13 @@ class _SettingsTabState extends State<SettingsTab> {
             onPressed: changePassword,
             icon: const Icon(Icons.lock),
             label: const Text('Ubah Password'),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: logout,
+            icon: const Icon(Icons.logout),
+            label: const Text('Logout'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           ),
         ],
       ),
